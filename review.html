@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет по фильму</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-4 md:p-8 max-w-3xl mx-auto" x-data="reviewApp()" x-init="init()">
+
+    <div x-show="loading" class="text-center py-20 text-gray-500">Загрузка...</div>
+
+    <div x-show="!loading">
+        <a href="index.html" class="text-blue-600 hover:underline">← Назад к спискам</a>
+        <h1 class="text-3xl font-bold mt-2 mb-1" x-text="movie.title"></h1>
+        <p class="text-gray-500 mb-6" x-text="`${movie.director || ''} ${movie.year || ''}`.trim()"></p>
+
+        <form @submit.prevent="saveReview" class="space-y-4">
+            
+            <!-- БЛОК 1 -->
+            <div x-data="{ open: true }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    1. Общая информация <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <select x-model="form.watched_with" class="w-full p-2 border rounded bg-white">
+                        <option value="">С кем смотрела?</option>
+                        <option>Одна</option><option>с друзьями</option><option>с семьей</option>
+                    </select>
+                    <select x-model="form.watched_where" class="w-full p-2 border rounded bg-white">
+                        <option value="">Где смотрела?</option>
+                        <option>Дома</option><option>Кинотеатр</option><option>В дороге</option>
+                    </select>
+                    <select x-model="form.regretted_time" class="w-full p-2 border rounded bg-white">
+                        <option value="">Пожалела о времени?</option>
+                        <option>Да</option><option>Нет</option><option>Сложный случай</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- БЛОК 2 -->
+            <div x-data="{ open: true }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    2. Первое впечатление <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.first_impression" placeholder="Что скажу другу, если спросит «Ну как?»" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.memorable_scene" placeholder="Какую сцену запомню, даже если захочу забыть?" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.favorite_quote" placeholder="Цитата, которую хочется выписать..." class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 3 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    3. Сюжет и история <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.plot_summary" placeholder="О чем это? (1-2 предложения)" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.pacing" placeholder="Темп / Динамика" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.logic" placeholder="Логика" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 4 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    4. Техническая часть <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.visuals" placeholder="Картинка / Визуал" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.music" placeholder="Музыка / Саундтрек" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.atmosphere" placeholder="Атмосфера" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 5 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    5. Актёрская игра <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.best_actor" placeholder="Кто понравился больше всего?" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.chemistry" placeholder="Химия между актерами" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 6 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    6. Личные впечатления <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.liked_most" placeholder="Что понравилось больше всего?" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.disliked_most" placeholder="Что не понравилось / Разозлило?" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.emotions" placeholder="Эмоции после фильма" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.thoughts" placeholder="О чем заставил задуматься?" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 7 (ВЕРДИКТ) -->
+            <div x-data="{ open: true }" class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-400">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    7. Вердикт <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-4">
+                    <div>
+                        <label class="block font-medium mb-2">Оценка: <span x-text="form.rating || 0"></span>/10</label>
+                        <div class="flex space-x-1">
+                            <template x-for="i in 10" :key="i">
+                                <button type="button" @click="form.rating = i" 
+                                        :class="i <= form.rating ? 'text-yellow-400' : 'text-gray-300'" 
+                                        class="text-3xl focus:outline-none hover:scale-110 transition">★</button>
+                            </template>
+                        </div>
+                    </div>
+                    <select x-model="form.rewatch" class="w-full p-2 border rounded bg-white">
+                        <option value="">Стоит ли пересматривать?</option>
+                        <option>Да</option><option>Нет</option><option>Возможно</option>
+                    </select>
+                    <textarea x-model="form.recommend_to" placeholder="Кому бы посоветовал(а)?" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 8 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    8. На подумать (про себя) <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.mood_before" placeholder="Состояние «До»" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.mood_after" placeholder="Состояние «После»" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 9 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    9. Я и герои <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.associated_character" placeholder="С кем себя ассоциировала?" class="w-full p-2 border rounded h-20"></textarea>
+                    <textarea x-model="form.affected_action" placeholder="Чей поступок задел / восхитил?" class="w-full p-2 border rounded h-20"></textarea>
+                </div>
+            </div>
+
+            <!-- БЛОК 10 -->
+            <div x-data="{ open: false }" class="bg-white rounded-lg shadow p-4">
+                <button type="button" @click="open = !open" class="w-full flex justify-between items-center font-semibold text-lg text-left">
+                    10. Итог <span x-text="open ? '−' : '+'"></span>
+                </button>
+                <div x-show="open" x-cloak class="mt-4 space-y-3">
+                    <textarea x-model="form.personal_significance" placeholder="Личная значимость" class="w-full p-2 border rounded h-24"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" :disabled="saving" class="w-full bg-green-600 text-white py-4 rounded-lg font-bold shadow hover:bg-green-700 text-lg transition sticky bottom-4 disabled:opacity-50">
+                <span x-show="!saving">💾 Сохранить отчет</span>
+                <span x-show="saving">Сохранение...</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'ВСТАВЬ_СЮДА_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'ВСТАВЬ_СЮДА_ANON_KEY';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function reviewApp() {
+            return {
+                loading: true,
+                saving: false,
+                movieId: null,
+                movie: {},
+                form: {
+                    rating: 0, watched_with: '', watched_where: '', regretted_time: '',
+                    first_impression: '', memorable_scene: '', favorite_quote: '',
+                    plot_summary: '', pacing: '', logic: '',
+                    visuals: '', music: '', atmosphere: '',
+                    best_actor: '', chemistry: '',
+                    liked_most: '', disliked_most: '', emotions: '', thoughts: '',
+                    rewatch: '', recommend_to: '',
+                    mood_before: '', mood_after: '',
+                    associated_character: '', affected_action: '',
+                    personal_significance: ''
+                },
+
+                async init() {
+                    const params = new URLSearchParams(window.location.search);
+                    this.movieId = parseInt(params.get('id'));
+                    if (!this.movieId) return window.location.href = 'index.html';
+
+                    // Грузим фильм
+                    const { data: movie } = await sb.from('movies').select('*').eq('id', this.movieId).single();
+                    if (!movie) return window.location.href = 'index.html';
+                    this.movie = movie;
+
+                    // Грузим отзыв, если есть
+                    const { data: review } = await sb.from('reviews').select('*').eq('movie_id', this.movieId).maybeSingle();
+                    if (review) {
+                        // Заполняем форму существующими данными
+                        Object.keys(this.form).forEach(key => {
+                            if (review[key] !== null) this.form[key] = review[key];
+                        });
+                    }
+                    this.loading = false;
+                },
+
+                async saveReview() {
+                    this.saving = true;
+                    
+                    // 1. Сохраняем/Обновляем отзыв (upsert)
+                    const reviewData = { movie_id: this.movieId, ...this.form };
+                    await sb.from('reviews').upsert(reviewData, { onConflict: 'movie_id' });
+
+                    // 2. Меняем статус фильма на "Посмотрено"
+                    if (this.movie.status !== 'watched') {
+                        await sb.from('movies').update({ status: 'watched' }).eq('id', this.movieId);
+                    }
+
+                    this.saving = false;
+                    alert('Отчет сохранен!');
+                    window.location.href = 'index.html';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
